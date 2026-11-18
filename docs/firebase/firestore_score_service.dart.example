@@ -1,0 +1,38 @@
+// Firebase холбосны дараа (Purevtulga) энэ файлыг
+// lib/services/firestore_score_service.dart нэрээр хуулна.
+//
+// Урьдчилсан алхам:
+//   flutter pub add firebase_core cloud_firestore
+//   dart pub global activate flutterfire_cli
+//   flutterfire configure
+// main.dart дотор:
+//   WidgetsFlutterBinding.ensureInitialized();
+//   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+// болон Provider<ScoreService>(create: (_) => FirestoreScoreService())
+//
+// Анхаар: Firestore-ийн анхны "test mode" дүрэм хугацаатай. Тохируулаарай.
+// Түвшингээр шүүгээд алхмаар эрэмбэлэхэд composite index хэрэгтэй
+// (алдааны мессеж дэх линкээр нэг товшоод үүсгэнэ).
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../models/score_entry.dart';
+import 'score_service.dart';
+
+class FirestoreScoreService implements ScoreService {
+  final _col = FirebaseFirestore.instance.collection('scores');
+
+  @override
+  Future<void> saveScore(ScoreEntry entry) => _col.add(entry.toMap());
+
+  @override
+  Future<List<ScoreEntry>> topScores(String levelName, {int limit = 10}) async {
+    final snap = await _col
+        .where('levelName', isEqualTo: levelName)
+        .orderBy('moves')
+        .orderBy('seconds')
+        .limit(limit)
+        .get();
+    return snap.docs.map((d) => ScoreEntry.fromMap(d.data())).toList();
+  }
+}
